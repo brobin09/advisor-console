@@ -1,0 +1,44 @@
+{
+  "name": "advisor-console",
+  "productName": "Advisor Console",
+  "version": "1.0.0",
+  "description": "History major advising console for NCCU Department of History. Local-only; student records never leave this machine.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac",
+    "dist:folder": "electron-builder --mac --dir"
+  },
+  "author": "Brian A. Robinson / NCCU Department of History",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.0"
+  },
+  "build": {
+    "appId": "edu.nccu.history.advisorconsole",
+    "productName": "Advisor Console",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.education",
+      "target": [
+        {
+          "target": "dir"
+        },
+        {
+          "target": "dmg"
+        }
+      ],
+      "icon": "build/icon.png",
+      "identity": "Apple Development: brobin09@gmail.com (L9YNDKNB75)",
+      "gatekeeperAssess": false
+    }
+  }
+}
