@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Advisor Console</title>
+<style>
+:root{
+  --maroon:#862633;--maroon-bright:#A6303F;--maroon-deep:#5E1A24;
+  --grey:#6B6C70;--grey-light:#9A9B9E;--grey-pale:#E8E8EA;
+  --paper:#F7F6F4;--white:#FFF;--ink:#1C1C1E;--line:#D8D6D2;
+  --ok:#3E7A4E;--ok-bg:#E4F0E6;--warn:#B5852A;--warn-bg:#FBF2DE;
+  --err:#B23A48;--err-bg:#FBE3E6;
+  --ip:#4A5A7A;--ip-bg:#E8ECF4;
+  --note:#3E5C76;--note-bg:#E8EEF4;
+  --shadow:0 1px 2px rgba(28,28,30,.08),0 4px 14px rgba(28,28,30,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--paper);color:var(--ink);line-height:1.5;display:grid;grid-template-columns:260px 1fr;height:100vh;overflow:hidden}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--maroon-bright);outline-offset:2px}
+
+nav{background:var(--maroon-deep);color:#fff;display:flex;flex-direction:column;height:100vh}
+nav .brand{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.15)}
+nav .brand h1{font-family:Georgia,serif;font-size:1.2rem;font-weight:700}
+nav .brand .rule{width:32px;height:3px;background:#fff;margin:9px 0 7px;opacity:.8}
+nav .brand p{font-size:.64rem;text-transform:uppercase;letter-spacing:.12em;opacity:.75;line-height:1.5}
+nav .roster{flex:1;overflow-y:auto;padding:10px 0}
+nav .roster-head{font-size:.62rem;text-transform:uppercase;letter-spacing:.13em;opacity:.6;padding:8px 20px}
+.rosterempty{padding:14px 20px;font-size:.8rem;opacity:.6}
+.advisee{width:100%;text-align:left;background:none;border:none;color:rgba(255,255,255,.85);padding:9px 20px;font-size:.86rem;border-left:3px solid transparent;display:flex;flex-direction:column;gap:1px}
+.advisee:hover{background:rgba(255,255,255,.08);color:#fff}
+.advisee.active{background:rgba(255,255,255,.12);border-left-color:#fff;color:#fff}
+.advisee .nm{font-weight:600}
+.advisee .meta{font-size:.68rem;opacity:.7}
+.flagdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warn);margin-left:6px}
+nav .navfoot{padding:12px 16px;border-top:1px solid rgba(255,255,255,.15);display:flex;flex-direction:column;gap:6px}
+.nbtn{background:#fff;color:var(--maroon);border:none;padding:9px;border-radius:5px;font-weight:600;font-size:.79rem}
+.nbtn.ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3)}
+.filestatus{font-size:.63rem;opacity:.75;line-height:1.4;padding:2px 2px 4px;word-break:break-all}
+.filestatus .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px}
+.filestatus.saving .dot{background:var(--warn)}
+
+main{overflow-y:auto;height:100vh}
+.empty-main{display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;color:var(--grey);text-align:center;padding:40px}
+.empty-main h2{font-family:Georgia,serif;font-size:1.6rem;color:var(--ink);margin-bottom:10px}
+.empty-main p{max-width:460px;font-size:.9rem;margin-bottom:8px;line-height:1.6}
+.empty-main .row{display:flex;gap:10px;margin-top:16px}
+.bigbtn{background:var(--maroon);color:#fff;border:none;padding:12px 22px;border-radius:6px;font-weight:600;font-size:.9rem}
+.bigbtn.ghost{background:#fff;color:var(--maroon);border:1.5px solid var(--maroon)}
+
+.topbar{background:var(--maroon);color:#fff;padding:18px 30px;position:sticky;top:0;z-index:20;box-shadow:var(--shadow)}
+.topbar h2{font-family:Georgia,serif;font-size:1.4rem}
+.topbar .meta{font-size:.78rem;opacity:.92;margin-top:3px;display:flex;gap:14px;flex-wrap:wrap}
+.topbar .meta .catalog.missing{background:var(--warn);color:#3A2D08;padding:0 7px;border-radius:3px;font-weight:700}
+.topbar-actions{position:absolute;top:18px;right:30px;display:flex;gap:8px}
+.tbtn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 12px;border-radius:5px;font-size:.76rem;font-weight:600}
+.tbtn:hover{background:rgba(255,255,255,.24)}
+.tbtn.solid{background:#fff;color:var(--maroon)}
+.tbtn.danger{border-color:rgba(255,255,255,.45)}
+.tbtn.danger:hover{background:var(--err);border-color:var(--err);color:#fff}
+
+.body{max-width:980px;margin:0 auto;padding:22px 30px 80px}
+.editbanner{background:var(--warn-bg);border:1px solid var(--warn);color:#7A5A18;border-radius:6px;padding:9px 14px;font-size:.8rem;font-weight:600;margin-bottom:16px}
+.catalert{background:var(--warn-bg);border-left:4px solid var(--warn);border-radius:6px;padding:11px 16px;font-size:.82rem;color:#6B4E15;margin-bottom:16px;line-height:1.5}
+
+.dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:8px;padding:13px 15px;box-shadow:var(--shadow)}
+.stat .num{font-size:1.6rem;font-weight:700;font-family:Georgia,serif;line-height:1}
+.stat .num .of{font-size:.85rem;color:var(--grey-light)}
+.stat .lbl{font-size:.65rem;text-transform:uppercase;letter-spacing:.07em;color:var(--grey);margin-top:4px}
+.stat .lbl .pg{color:var(--ip);text-transform:none;letter-spacing:0;font-weight:600}
+.stat .bar{height:6px;background:var(--grey-pale);border-radius:3px;margin-top:8px;overflow:hidden;display:flex}
+.stat .bar .e{background:var(--maroon);height:100%}
+.stat .bar .p{background:var(--ip);height:100%;opacity:.45}
+.stat.done .num{color:var(--ok)}.stat.done .bar .e{background:var(--ok)}
+
+.tabbar{display:flex;gap:2px;border-bottom:2px solid var(--line);margin-bottom:20px;flex-wrap:wrap}
+.tab{background:none;border:none;padding:10px 16px;font-size:.88rem;font-weight:600;color:var(--grey);border-bottom:3px solid transparent;margin-bottom:-2px}
+.tab.active{color:var(--maroon);border-bottom-color:var(--maroon)}
+.tab .cnt{font-size:.66rem;background:var(--err);color:#fff;border-radius:10px;padding:1px 6px;margin-left:5px}
+.panel{display:none}.panel.active{display:block}
+
+.card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card h3{font-size:.73rem;text-transform:uppercase;letter-spacing:.1em;color:var(--grey);margin-bottom:4px}
+.cardnote{font-size:.78rem;color:var(--grey-light);margin-bottom:10px;font-style:italic}
+.empty-hint{color:var(--grey);font-size:.85rem;font-style:italic;padding:6px 0}
+
+.flagrow{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--grey-pale);font-size:.86rem}
+.flagrow:first-of-type{border-top:none}
+.fl-tag{flex:none;font-size:.6rem;font-weight:800;letter-spacing:.08em;padding:2px 7px;border-radius:3px;width:62px;text-align:center}
+.flagrow.warn .fl-tag{background:var(--err);color:#fff}
+.flagrow.need .fl-tag{background:var(--maroon);color:#fff}
+.flagrow.watch .fl-tag{background:var(--ip);color:#fff}
+.flagrow.note .fl-tag{background:var(--grey-pale);color:var(--grey)}
+.fl-sec{flex:none;width:150px;font-weight:700;font-size:.8rem}
+.fl-text{flex:1;color:var(--ink)}
+.flagrow.warn .fl-text{font-weight:600}
+
+.iprow{display:flex;gap:10px;align-items:baseline;padding:6px 0;border-top:1px solid var(--grey-pale);font-size:.85rem}
+.ipnum{font-weight:700;width:80px;flex:none}
+.iptitle{flex:1}
+.ipsec{color:var(--grey);font-size:.78rem;width:150px;flex:none}
+.ipcr{color:var(--ip);font-weight:700;flex:none}
+
+.qrow{display:flex;gap:9px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--grey-pale)}
+.qrow input{accent-color:var(--maroon);margin-top:4px}
+.qtext{flex:1;font-size:.88rem}
+.qtext.done{text-decoration:line-through;color:var(--grey-light)}
+.qdel{border:none;background:none;color:var(--grey-light);font-size:1rem}
+.qdel:hover{color:var(--err)}
+.qadd{display:flex;gap:8px;margin-top:12px}
+.qadd input{flex:1;border:1px solid var(--line);border-radius:5px;padding:8px 10px;font-size:.88rem;font-family:inherit}
+.btnq{background:var(--maroon);color:#fff;border:none;padding:8px 16px;border-radius:5px;font-weight:600;font-size:.82rem}
+
+.reqblock{background:#fff;border:1px solid var(--line);border-radius:8px;margin-bottom:16px;box-shadow:var(--shadow);overflow:hidden}
+.reqblock>h3{background:var(--maroon-deep);color:#fff;padding:10px 16px;font-size:.92rem;font-weight:700;display:flex;justify-content:space-between}
+.reqblock>h3 em{font-style:normal;opacity:.8;font-weight:500}
+.section{border-top:1px solid var(--line)}
+.section-head{padding:9px 16px 5px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.section-head .sname{font-weight:700;font-size:.88rem}
+.section-head .snote{font-size:.72rem;color:var(--grey)}
+.section-head .status{margin-left:auto;font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:20px}
+.status.met{background:var(--ok-bg);color:var(--ok)}
+.status.partial{background:var(--warn-bg);color:var(--warn)}
+.status.empty{background:var(--grey-pale);color:var(--grey)}
+.waive-row{padding:2px 16px 6px;font-size:.8rem;color:var(--grey)}
+.waive-row input{accent-color:var(--maroon);margin-right:5px}
+.grouphint{padding:2px 16px 8px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.gchip{font-size:.73rem;font-weight:600;padding:3px 11px;border-radius:20px;border:1.5px solid var(--line);color:var(--grey)}
+.gchip.on{background:var(--maroon);border-color:var(--maroon);color:#fff}
+.gchip.prog{border-color:var(--ip);color:var(--ip);border-style:dashed}
+.ghelp{font-size:.72rem;color:var(--grey-light);font-style:italic}
+
+table.courses{width:100%;border-collapse:collapse;font-size:.83rem}
+table.courses td{padding:5px 14px;border-top:1px solid var(--grey-pale);vertical-align:middle}
+.crow.complete{background:var(--maroon);color:#fff}
+.crow.inprogress{background:var(--ip-bg);color:var(--ink)}
+.crow.misplaced{background:var(--err-bg)}
+.crow.failed{background:var(--grey-pale);color:var(--grey)}
+.crow.planned{background:#fff}
+.crow .cnum{font-weight:700}
+.crow .cnote{font-size:.75rem;color:var(--grey)}
+.crow.complete .cnote{color:rgba(255,255,255,.7)}
+.ipbadge{font-size:.6rem;font-weight:800;letter-spacing:.06em;background:var(--ip);color:#fff;padding:2px 6px;border-radius:3px}
+.norows{color:var(--grey-light);font-style:italic;padding:8px 14px}
+.flagline{font-size:.72rem;color:var(--err);padding:2px 14px 6px}
+table.courses input{width:100%;border:1px solid var(--line);border-radius:4px;padding:5px 7px;font-size:.81rem;background:#fff;color:var(--ink)}
+.crow.complete input{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.35)}
+.ipbox{font-size:.7rem;color:var(--grey);white-space:nowrap;display:flex;align-items:center;gap:4px}
+.ipbox input{width:auto;accent-color:var(--ip)}
+.rowdel{border:none;background:none;color:var(--grey-light);font-size:1rem;padding:2px 6px}
+.rowdel:hover{color:var(--err)}
+.addrow{margin:6px 14px 10px;background:var(--paper);border:1px dashed var(--line);color:var(--maroon);padding:6px 12px;border-radius:5px;font-size:.78rem;font-weight:600}
+.editinfo{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.fld label{display:block;font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--grey);font-weight:600;margin-bottom:3px}
+.fld input,.fld textarea{width:100%;border:1px solid var(--line);border-radius:5px;padding:8px 10px;font-size:.88rem;font-family:inherit}
+
+.commentbtn{border:1px solid var(--note);background:var(--note-bg);color:var(--note);border-radius:4px;font-size:.68rem;padding:2px 8px;font-weight:600}
+.commentbtn:hover,.commentbtn.has{background:var(--note);color:#fff}
+.inline-comment{background:var(--note-bg);border-left:3px solid var(--note);padding:6px 14px;font-size:.8rem}
+.inline-comment .lbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--note);font-weight:700;margin-right:6px}
+.notewrap{padding:8px 14px 12px}
+textarea.advisor{width:100%;border:1px solid var(--note);border-radius:6px;padding:9px 11px;font-family:inherit;font-size:.88rem;background:var(--note-bg);min-height:60px;resize:vertical}
+.advisor-label{font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;color:var(--note);font-weight:700;margin-bottom:5px}
+.advisor-label::before{content:"\270E  "}
+
+.readfield{margin-bottom:12px}
+.readfield .rl{font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--grey);font-weight:600;margin-bottom:3px}
+.readfield .rv{font-family:Georgia,serif;font-size:.93rem;white-space:pre-wrap;background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:9px 12px}
+.readfield .rv.empty{color:var(--grey-light);font-style:italic}
+.intern-read{background:#fff;border:1px solid var(--line);border-left:4px solid var(--maroon);border-radius:6px;padding:12px 16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.intern-read .ih{font-weight:700;font-size:.92rem}
+.intern-read .is{font-size:.7rem;color:#fff;background:var(--grey);padding:1px 8px;border-radius:10px;margin-left:8px}
+.intern-read .id{font-size:.79rem;color:var(--grey);margin-top:3px}
+.intern-read .inote{font-family:Georgia,serif;font-size:.85rem;margin-top:6px}
+
+.meeting{background:#fff;border:1px solid var(--line);border-radius:8px;padding:13px 16px;margin-bottom:11px;box-shadow:var(--shadow)}
+.meeting .mh{display:flex;align-items:baseline;margin-bottom:5px}
+.meeting .mdate{font-weight:700;font-size:.84rem}
+.meeting .mdel{margin-left:auto;border:none;background:none;color:var(--grey-light);font-size:1rem}
+.meeting .mbody{font-family:Georgia,serif;font-size:.89rem;white-space:pre-wrap}
+.addmeeting{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end}
+.addmeeting .fld{flex:1;min-width:120px}
+
+#modal{position:fixed;inset:0;background:rgba(28,28,30,.5);display:none;z-index:60;align-items:center;justify-content:center;padding:30px}
+#modal.show{display:flex}
+#modal .sheet{background:#fff;border-radius:8px;width:min(500px,100%);padding:22px 24px;border-top:5px solid var(--note)}
+#modal h3{font-size:1rem;margin-bottom:4px}
+#modal .ctx{font-size:.8rem;color:var(--grey);margin-bottom:12px}
+#modal textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:10px;font-family:inherit;font-size:.9rem;min-height:100px}
+#modal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+#modal .btn{border:1px solid var(--line);background:#fff;padding:8px 16px;border-radius:5px;font-weight:600;font-size:.84rem}
+#modal .btn.primary{background:var(--note);border-color:var(--note);color:#fff}
+
+.ovbtn{margin-left:8px;border:1px solid var(--grey-light);background:transparent;color:var(--grey);
+  border-radius:4px;font-size:.66rem;font-weight:700;letter-spacing:.03em;padding:2px 8px}
+.ovbtn:hover{border-color:var(--maroon);color:var(--maroon)}
+.ovbtn.on{background:var(--maroon);border-color:var(--maroon);color:#fff}
+.status.ovr{background:var(--maroon);color:#fff}
+.ovnote{background:#F3EAEC;border-left:3px solid var(--maroon);padding:7px 14px;font-size:.8rem;color:#5E1A24}
+.ovnote .ovlbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;font-weight:800;margin-right:7px}
+.ovnote em{display:block;font-style:normal;font-size:.7rem;opacity:.7;margin-top:2px}
+#ovModal{position:fixed;inset:0;background:rgba(28,28,30,.5);display:none;z-index:65;align-items:center;justify-content:center;padding:30px}
+#ovModal.show{display:flex}
+#ovModal .sheet{background:#fff;border-radius:8px;width:min(520px,100%);padding:22px 24px;border-top:5px solid var(--maroon)}
+#ovModal h3{font-size:1.05rem;margin-bottom:6px}
+#ovModal .ctx{font-size:.84rem;color:var(--grey);margin-bottom:12px;line-height:1.5}
+#ovModal .ctx strong{color:var(--ink);font-size:.92rem}
+#ovModal textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:10px;font-family:inherit;font-size:.9rem;min-height:90px}
+#ovModal .ovhint{font-size:.76rem;color:var(--grey);margin-top:8px;line-height:1.5;font-style:italic}
+#ovModal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+#ovModal .btn{border:1px solid var(--line);background:#fff;padding:8px 16px;border-radius:5px;font-weight:600;font-size:.84rem;color:var(--ink)}
+#ovModal .btn.primary{background:var(--maroon);border-color:var(--maroon);color:#fff}
+#ovModal .btn.danger{margin-right:auto;border-color:var(--err);color:var(--err)}
+
+table.ledger{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:4px}
+table.ledger th{text-align:right;font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;color:var(--grey);
+  font-weight:700;padding:5px 10px;border-bottom:1px solid var(--line)}
+table.ledger th:first-child{text-align:left}
+table.ledger td{padding:8px 10px;border-bottom:1px solid var(--grey-pale);text-align:right;font-variant-numeric:tabular-nums}
+table.ledger td:first-child{text-align:left}
+table.ledger .lname{font-weight:700;display:block}
+table.ledger .lreq{font-size:.7rem;color:var(--grey-light)}
+table.ledger .lprog{color:var(--ip)}
+table.ledger .lshort{color:var(--err);font-weight:700}
+table.ledger .lok{color:var(--ok);font-weight:700}
+table.ledger .ltotal{font-weight:700}
+table.ledger .ltyp{color:var(--grey);font-variant-numeric:tabular-nums}
+table.ledger .loff{color:var(--maroon)}
+table.ledger .ledger-total td{border-top:2px solid var(--ink);border-bottom:none;font-weight:800;padding-top:9px}
+.ledgernote{font-size:.8rem;color:var(--grey);margin-top:10px;line-height:1.55;
+  background:var(--paper);border-left:3px solid var(--maroon);padding:8px 12px;border-radius:0}
+.ledgernote strong{color:var(--ink)}
+.ledgerwarn{color:var(--err);font-weight:700;display:block;margin-top:4px}
+
+.verdict{display:flex;gap:20px;align-items:center;background:#fff;border:1px solid var(--line);border-left:5px solid var(--grey);border-radius:8px;padding:16px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.verdict.open{border-left-color:var(--maroon)}
+.verdict.hours{border-left-color:var(--warn)}
+.verdict.ok{border-left-color:var(--ok)}
+.verdict .v-main{flex:none;text-align:center;padding-right:20px;border-right:1px solid var(--line)}
+.verdict .v-count{font-family:Georgia,serif;font-size:2rem;font-weight:700;line-height:1;display:block}
+.verdict.ok .v-count{color:var(--ok)}
+.verdict.open .v-count{color:var(--maroon)}
+.verdict .v-of{font-size:1rem;color:var(--grey-light)}
+.verdict .v-lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.11em;color:var(--grey);font-weight:700}
+.verdict .v-body{flex:1;font-size:.88rem;line-height:1.55}
+.stat.req .num{font-size:1.5rem}
+.stat.req .num .of{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--grey);font-weight:700}
+.stat.req.done .num{color:var(--ok)}
+.stat .subhrs{font-size:.72rem;color:var(--grey);margin-top:6px;font-variant-numeric:tabular-nums}
+.stat .subhrs .pg{color:var(--ip)}
+.unmetrow{display:flex;gap:12px;align-items:baseline;padding:9px 0;border-top:1px solid var(--grey-pale)}
+.unmetrow:first-of-type{border-top:none}
+.um-name{flex:1;font-weight:700;font-size:.9rem}
+.um-state{font-size:.78rem;color:var(--maroon);font-weight:600}
+.allmet{color:var(--ok);font-weight:700;font-size:.9rem;padding:4px 0}
+.print-advisor-note{display:none}
+#printHead{display:none}
+
+/* ---------- PRINT / PDF EXPORT ---------- */
+@media print{
+  body{display:block;height:auto;overflow:visible;background:#fff}
+  nav,.topbar-actions,.tabbar,.addmeeting,.commentbtn,textarea.advisor,.advisor-label,
+  .mdel,.qdel,.qadd,#modal,#ovModal,.ovbtn,.addrow,.rowdel,.editbanner,.waive-row,.cardnote{display:none!important}
+  .ovnote{background:#fff;border-left:2px solid #000;color:#000}
+  main{height:auto;overflow:visible}
+  .topbar{position:static;background:#fff;color:#000;border-bottom:3px double #000;padding:0 0 10px;box-shadow:none}
+  .topbar h2{font-size:1.4rem}
+  .topbar .meta{color:#333}
+  .topbar .meta .catalog.missing{background:none;color:#000;font-weight:700;border:1px solid #000}
+  #printHead{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.14em;color:#555;margin-bottom:6px}
+  .body{max-width:100%;padding:12px 0 0}
+  .panel{display:block!important;page-break-inside:auto}
+  .panel+.panel{margin-top:16px;border-top:1px solid #999;padding-top:12px}
+  .stat,.card,.reqblock,.meeting,.intern-read{box-shadow:none;break-inside:avoid;border-color:#999}
+  .reqblock>h3{background:#fff;color:#000;border-bottom:2px solid #000}
+  .crow.complete{background:#fff;color:#000}
+  .crow.complete .cnum::after{content:" \2713";font-weight:700}
+  .crow.inprogress{background:#F0F0F0}
+  .crow.misplaced{background:#fff}
+  .crow.misplaced .cnum::after{content:" \26A0"}
+  .ipbadge{background:#fff;color:#000;border:1px solid #000}
+  .fl-tag{border:1px solid #000;background:#fff!important;color:#000!important}
+  .flagrow.warn{font-weight:700}
+  .inline-comment{background:#fff;border-left:2px solid #000;font-style:italic}
+  .readfield .rv{background:#fff;border:none;padding:2px 0}
+  .print-advisor-note{display:block!important;font-style:italic;border-left:2px solid #000;padding:4px 10px;margin:6px 14px 10px;font-size:.82rem}
+  .qrow input{-webkit-appearance:none;appearance:none;width:11px;height:11px;border:1px solid #000;display:inline-block}
+  .catalert{border:1px solid #000;background:#fff;color:#000}
+  .dash{grid-template-columns:repeat(4,1fr)}
+  .stat .bar{border:1px solid #999}
+}
+</style>
+</head>
+<body>
+<nav>
+  <div class="brand"><h1>Advisor Console</h1><div class="rule"></div><p>History Major Advising<br>NCCU Dept. of History</p></div>
+  <div class="roster"><div class="roster-head">Advisees</div><div id="roster"></div></div>
+  <div class="navfoot">
+    <div class="filestatus" id="fileStatus"></div>
+    <button class="nbtn" id="btnSaveNow">Save Now</button>
+    <button class="nbtn" id="btnImportPdf">+ Import DegreeWorks PDF</button>
+    <button class="nbtn ghost" id="btnImportStudent">+ Import Student File</button>
+    <button class="nbtn ghost" id="btnNewStudent">+ New Student (blank)</button>
+    <button class="nbtn ghost" id="btnSaveStudent">Save This Student as a File</button>
+    <button class="nbtn ghost" id="btnReveal">Show Caseload File</button>
+    <button class="nbtn ghost" id="btnSwitch">Open Other Caseload</button>
+  </div>
+</nav>
+<main id="main"></main>
+
+<div id="ovModal"><div class="sheet">
+  <h3>Mark requirement met</h3>
+  <div class="ctx"><strong id="ovSection"></strong><br><span id="ovCurrent"></span></div>
+  <textarea id="ovReason" placeholder="Why is this met? e.g. placement exam, approved substitution, departmental petition, transfer equivalency&#8230;"></textarea>
+  <p class="ovhint">This overrides the tool’s reading and appears on the printed advising summary as part of the record. It satisfies the requirement but adds no credit hours.</p>
+  <div class="row">
+    <button class="btn danger" id="ovRemove">Remove override</button>
+    <button class="btn" id="ovCancel">Cancel</button>
+    <button class="btn primary" id="ovSave">Mark met</button>
+  </div>
+</div></div>
+
+<div id="modal"><div class="sheet">
+  <h3>Advisor Comment</h3>
+  <div class="ctx" id="modalCtx"></div>
+  <textarea id="modalText" placeholder="Your comment or question about this course\u2026"></textarea>
+  <div class="row"><button class="btn" id="modalCancel">Cancel</button><button class="btn primary" id="modalSave">Save</button></div>
+</div></div>
+
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script>
+if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc="vendor/pdf.worker.min.js";
+var CURRICULUM = {"major":"History","catalog":{"HIST 1100":{"number":"HIST 1100","title":"World Societies to 1650","valid":["Core Required"],"credits":3},"HIST 2000":{"number":"HIST 2000","title":"Historical Writing and Literature","valid":["Core Required","Writing Intensive"],"credits":3},"HIST 2210":{"number":"HIST 2210","title":"United States History to 1865","valid":["Core Required"],"credits":3},"HIST 2220":{"number":"HIST 2220","title":"United States History Since 1865","valid":["Core Required"],"credits":3},"HIST 2890":{"number":"HIST 2890","title":"Methods and Applications in History","valid":["Core Required"],"credits":3},"HIST 4010":{"number":"HIST 4010","title":"Seminar in European History","valid":["Seminar","European"],"credits":3},"HIST 4020":{"number":"HIST 4020","title":"Seminar in American History","valid":["Seminar"],"credits":3},"HIST 4040":{"number":"HIST 4040","title":"Seminar in African History","valid":["Seminar","African"],"credits":3},"HIST 4050":{"number":"HIST 4050","title":"Seminar in African American History","valid":["Seminar"],"credits":3},"HIST 4060":{"number":"HIST 4060","title":"Seminar in Latin American History","valid":["Seminar","Latin American"],"credits":3},"HIST 4070":{"number":"HIST 4070","title":"Seminar in the African Diaspora","valid":["Seminar"],"credits":3},"HIST 2410":{"number":"HIST 2410","title":"African History to 1800","valid":["African","Elective"],"credits":3},"HIST 2420":{"number":"HIST 2420","title":"African History Since 1800","valid":["African","Elective"],"credits":3},"HIST 3040":{"number":"HIST 3040","title":"Topics in African History","valid":["African","Elective"],"credits":3},"HIST 3410":{"number":"HIST 3410","title":"Ancient Africa","valid":["African","Elective"],"credits":3},"HIST 3420":{"number":"HIST 3420","title":"State Formation in Pre-Colonial Africa","valid":["African","Elective"],"credits":3},"HIST 3430":{"number":"HIST 3430","title":"Africa Under Colonial Rule","valid":["African","Elective"],"credits":3},"HIST 3440":{"number":"HIST 3440","title":"Africa Since Independence","valid":["African","Elective"],"credits":3},"HIST 3450":{"number":"HIST 3450","title":"African Economic History","valid":["African","Elective"],"credits":3},"HIST 4400":{"number":"HIST 4400","title":"Independent Readings in African History","valid":["African","Elective"],"credits":3},"HIST 4450":{"number":"HIST 4450","title":"History of Contemporary South Africa","valid":["African","Elective"],"credits":3},"HIST 4470":{"number":"HIST 4470","title":"History of Pan-Africanism to 1963","valid":["African","Elective"],"credits":3},"HIST 3010":{"number":"HIST 3010","title":"Problems in European History","valid":["European","Elective"],"credits":3},"HIST 3100":{"number":"HIST 3100","title":"Independent Readings in European History","valid":["European","Elective"],"credits":3},"HIST 3115":{"number":"HIST 3115","title":"Europe, 1500-1815","valid":["European","Elective"],"credits":3},"HIST 3118":{"number":"HIST 3118","title":"Europe, 1815-1914","valid":["European","Elective"],"credits":3},"HIST 3145":{"number":"HIST 3145","title":"History of Russia to the Revolution","valid":["European","Elective"],"credits":3},"HIST 3150":{"number":"HIST 3150","title":"History of England to 1688","valid":["European","Elective"],"credits":3},"HIST 3160":{"number":"HIST 3160","title":"History of England since 1688","valid":["European","Elective"],"credits":3},"HIST 3180":{"number":"HIST 3180","title":"History of France since the Enlightenment","valid":["European","Elective"],"credits":3},"HIST 4110":{"number":"HIST 4110","title":"Europe Since 1914","valid":["European","Elective"],"credits":3},"HIST 4120":{"number":"HIST 4120","title":"European Diplomatic History, 1879 to Present","valid":["European","Elective"],"credits":3},"HIST 4140":{"number":"HIST 4140","title":"The Revolutionary Era and Napoleon","valid":["European","Elective"],"credits":3},"HIST 4150":{"number":"HIST 4150","title":"European Intellectual History","valid":["European","Elective"],"credits":3},"HIST 4160":{"number":"HIST 4160","title":"The African Presence in Europe","valid":["European","Elective"],"credits":3},"HIST 4170":{"number":"HIST 4170","title":"The New Europeans: Race and Minorities","valid":["European","Elective"],"credits":3},"HIST 2610":{"number":"HIST 2610","title":"Latin America: Colonial Period, 1480-1820","valid":["Latin American","Elective"],"credits":3},"HIST 2620":{"number":"HIST 2620","title":"Latin America: The National Period","valid":["Latin American","Elective"],"credits":3},"HIST 3600":{"number":"HIST 3600","title":"Independent Readings in Latin American History","valid":["Latin American","Elective"],"credits":3},"HIST 4620":{"number":"HIST 4620","title":"Latin American Revolution","valid":["Latin American","Elective"],"credits":3},"HIST 4630":{"number":"HIST 4630","title":"The African Presence in Latin America","valid":["Latin American","Elective"],"credits":3},"HIST 4640":{"number":"HIST 4640","title":"Latin American History Through Literature/Film","valid":["Latin American","Elective"],"credits":3},"HIST 2080":{"number":"HIST 2080","title":"History of Women to 1750","valid":["Elective"],"credits":3},"HIST 2081":{"number":"HIST 2081","title":"History of Women Since 1750","valid":["Elective"],"credits":3},"HIST 2110":{"number":"HIST 2110","title":"Ancient History","valid":["Elective"],"credits":3},"HIST 2120":{"number":"HIST 2120","title":"Medieval History","valid":["Elective"],"credits":3},"HIST 2910":{"number":"HIST 2910","title":"South Asia Prior to 1750","valid":["Elective"],"credits":3},"HIST 3020":{"number":"HIST 3020","title":"Problems in American History","valid":["Elective"],"credits":3},"HIST 3070":{"number":"HIST 3070","title":"Topics in the African Diaspora","valid":["Elective"],"credits":3},"HIST 3210":{"number":"HIST 3210","title":"American Military History","valid":["Elective"],"credits":3},"HIST 3220":{"number":"HIST 3220","title":"Recent United States History","valid":["Elective"],"credits":3},"HIST 3230":{"number":"HIST 3230","title":"American Urban History","valid":["Elective"],"credits":3},"HIST 3250":{"number":"HIST 3250","title":"American Economic History","valid":["Elective"],"credits":3},"HIST 3260":{"number":"HIST 3260","title":"American Labor History","valid":["Elective"],"credits":3},"HIST 3500":{"number":"HIST 3500","title":"Independent Readings in African American History","valid":["Elective"],"credits":3},"HIST 3510":{"number":"HIST 3510","title":"African American History to 1865","valid":["Elective"],"credits":3},"HIST 3520":{"number":"HIST 3520","title":"African American History Since 1865","valid":["Elective"],"credits":3},"HIST 3630":{"number":"HIST 3630","title":"History of Central America","valid":["Elective"],"credits":3},"HIST 3710":{"number":"HIST 3710","title":"Introduction to African Diaspora History","valid":["Elective"],"credits":3},"HIST 3900":{"number":"HIST 3900","title":"Internship in Historical Studies","valid":["Elective"],"credits":3},"HIST 3910":{"number":"HIST 3910","title":"South Asia Under British Rule, 1750-1885","valid":["Elective"],"credits":3},"HIST 3920":{"number":"HIST 3920","title":"Unmaking of British Empire in India, 1885-1947","valid":["Elective"],"credits":3},"HIST 4130":{"number":"HIST 4130","title":"Renaissance, Reformation, and Expansion","valid":["Elective"],"credits":3},"HIST 4200":{"number":"HIST 4200","title":"Independent Readings in American History","valid":["Elective"],"credits":3},"HIST 4210":{"number":"HIST 4210","title":"Foreign Relations of the United States","valid":["Elective"],"credits":3},"HIST 4230":{"number":"HIST 4230","title":"Constitutional History of the United States","valid":["Elective"],"credits":3},"HIST 4310":{"number":"HIST 4310","title":"History of North Carolina","valid":["Elective"],"credits":3},"HIST 4510":{"number":"HIST 4510","title":"Modern African American History Since 1900","valid":["Elective"],"credits":3},"HIST 4610":{"number":"HIST 4610","title":"History of the Caribbean","valid":["Elective"],"credits":3},"HIST 4755":{"number":"HIST 4755","title":"Topics in African Diaspora History","valid":["Elective"],"credits":3},"HIST 4810":{"number":"HIST 4810","title":"Oral History-Theory","valid":["Elective"],"credits":3},"HIST 4910":{"number":"HIST 4910","title":"Comparative Slavery","valid":["Elective"],"credits":3},"HIST 4940":{"number":"HIST 4940","title":"Fiction, Film and South Asia's Past","valid":["Elective"],"credits":3},"HIST 1320":{"number":"HIST 1320","title":"World Societies","valid":["GE Social Science (Required)"]},"HIST 1530":{"number":"HIST 1530","title":"The Black Experience to 1865","valid":["GE Social Science"]},"HIST 1540":{"number":"HIST 1540","title":"The Black Experience Since 1865","valid":["GE Social Science"]}},"ge_catalog":[{"number":"ENG 1110","title":"English Composition I","credits":3,"section":"English Composition"},{"number":"ENG 1210","title":"English Composition II","credits":3,"section":"English Composition"},{"number":"SPAN 1192","title":"Elementary Spanish II","credits":3,"section":"Foreign Language"},{"number":"FREN 1192","title":"Elementary French II","credits":3,"section":"Foreign Language"},{"number":"GERM 1192","title":"Elementary German II","credits":3,"section":"Foreign Language"},{"number":"MFL 1192","title":"Critical Language II","credits":3,"section":"Foreign Language"},{"number":"MATH 1080","title":"Mathematics for Liberal Arts & Social Sciences","credits":3,"section":"Mathematics"},{"number":"MATH 1100","title":"College Algebra and Trigonometry I","credits":3,"section":"Mathematics"},{"number":"MATH 1110","title":"Elementary Statistics","credits":3,"section":"Mathematics"},{"number":"MATH 1200","title":"College Algebra and Trigonometry II","credits":3,"section":"Mathematics"},{"number":"MATH 1210","title":"Finite Mathematics","credits":3,"section":"Mathematics"},{"number":"MATH 1410","title":"Pre-Calculus Mathematics","credits":5,"section":"Mathematics"},{"number":"BIOL 1000","title":"Heredity and Society","credits":3,"section":"Science"},{"number":"BIOL 1100","title":"General Biology","credits":3,"section":"Science"},{"number":"BIOL 1300","title":"Molecules and Cell Function","credits":4,"section":"Science"},{"number":"BIOL 2105","title":"Biology/Chemistry. Intro to Computational Science and Informatics","credits":3,"section":"Science"},{"number":"CHEM 1000","title":"Physical Science Related to Chem","credits":3,"section":"Science"},{"number":"CHEM 1100","title":"General Chemistry I","credits":4,"section":"Science"},{"number":"CHEM 1200","title":"General Chemistry II","credits":4,"section":"Science"},{"number":"CHEM 1500","title":"Chemistry and Human Life","credits":3,"section":"Science"},{"number":"CHEM 2105","title":"Computational Science & Informatics","credits":3,"section":"Science"},{"number":"GEOG 2010","title":"Online Weather","credits":3,"section":"Science"},{"number":"GEOG 2100","title":"Physical Geography","credits":3,"section":"Science"},{"number":"GEOG 2120","title":"Geology","credits":3,"section":"Science"},{"number":"GEOG 2350","title":"Earth Science","credits":3,"section":"Science"},{"number":"PHYS 1000","title":"Physics w/ Application to Enviro Topics","credits":3,"section":"Science"},{"number":"PHYS 1210","title":"The Language of Science","credits":3,"section":"Science"},{"number":"PHYS 1050","title":"Astronomy","credits":3,"section":"Science"},{"number":"SCI 1220","title":"Science Odyssey","credits":4,"section":"Science"},{"number":"STEM 1200","title":"Scientific Decisions in Everyday Life","credits":3,"section":"Science"},{"number":"ENSC 1000","title":"Intro to Sustainable Planet","credits":3,"section":"Science"},{"number":"HIST 1320","title":"World Societies (REQUIRED)","credits":3,"section":"Social Science"},{"number":"HIST 1530","title":"The Black Experience to 1865","credits":3,"section":"Social Science"},{"number":"HIST 1540","title":"The Black Experience Since 1865","credits":3,"section":"Social Science"},{"number":"ECON 2200","title":"Principles of Macroeconomics","credits":3,"section":"Social Science"},{"number":"ECON 2100","title":"Principles of Microeconomics","credits":3,"section":"Social Science"},{"number":"GEOG 1000","title":"Intro to Geography","credits":3,"section":"Social Science"},{"number":"GEOG 1100","title":"World Regional Geography","credits":3,"section":"Social Science"},{"number":"GLST 1000","title":"The Global Experience","credits":3,"section":"Social Science"},{"number":"POLS 2100","title":"American Government","credits":3,"section":"Social Science"},{"number":"PSY 2100","title":"General Psychology","credits":3,"section":"Social Science"},{"number":"SOCI 2000","title":"Global Societies and Human Behavior","credits":3,"section":"Social Science"},{"number":"SOCI 2100","title":"Principles of Sociology","credits":3,"section":"Social Science"},{"number":"SOCI 2300","title":"Social Problems","credits":3,"section":"Social Science"},{"number":"HUM 2410","title":"Arts & Humanities I (One Required)","credits":3,"section":"Arts & Humanities"},{"number":"HUM 2420","title":"Arts & Humanities II (One Required)","credits":3,"section":"Arts & Humanities"},{"number":"ART 1000","title":"Intro to the Study of Art","credits":2,"section":"Arts & Humanities"},{"number":"ART 3200","title":"African-American Art History","credits":4,"section":"Arts & Humanities"},{"number":"ART 1500","title":"Survey of the History of Art","credits":3,"section":"Arts & Humanities"},{"number":"DRAM 1000","title":"Appreciation of Drama","credits":2,"section":"Arts & Humanities"},{"number":"DRAM 2110","title":"History of the Theatre I","credits":3,"section":"Arts & Humanities"},{"number":"DRAM 2120","title":"History of the Theatre II","credits":3,"section":"Arts & Humanities"},{"number":"ENG 1300","title":"World Literature I","credits":3,"section":"Arts & Humanities"},{"number":"ENG 1400","title":"World Literature II","credits":3,"section":"Arts & Humanities"},{"number":"ENG 1500","title":"Writing about Literature","credits":3,"section":"Arts & Humanities"},{"number":"ENG 1700","title":"Religion and Literature","credits":3,"section":"Arts & Humanities"},{"number":"ENG 2340","title":"Contemporary African American Literature","credits":3,"section":"Arts & Humanities"},{"number":"FREN 2300","title":"Intro to Francophone Literature","credits":3,"section":"Arts & Humanities"},{"number":"GERM 2104","title":"Intro to German Civilization","credits":3,"section":"Arts & Humanities"},{"number":"GERM 2105","title":"Intro to German Literature","credits":3,"section":"Arts & Humanities"},{"number":"MUSL 1000","title":"Survey of Music","credits":3,"section":"Arts & Humanities"},{"number":"MUSL 1300","title":"Twentieth-Century Music","credits":2,"section":"Arts & Humanities"},{"number":"PHIL 1000","title":"Intro to Philosophy","credits":3,"section":"Arts & Humanities"},{"number":"PHIL 2210","title":"Ethics","credits":3,"section":"Arts & Humanities"},{"number":"SPAN 2300","title":"Intro to Hispanic Literature","credits":3,"section":"Arts & Humanities"},{"number":"SPAN 3300","title":"Intro to African-Hispanic Literature","credits":3,"section":"Arts & Humanities"},{"number":"HEDU 1531","title":"Health (REQUIRED)","credits":2,"section":"Health & Wellness"},{"number":"KIN 1541","title":"Fitness (REQUIRED)","credits":2,"section":"Health & Wellness"},{"number":"UNIV 1100","title":"First Year Seminar","credits":2,"section":"Social & Career Enhancement"},{"number":"HIST 2000","title":"Historical Writing and Literature (Fulfills for History Majors)","credits":3,"section":"Writing Intensive"},{"number":"MSCM 1250","title":"Elements of Speech Communication (Recommended)","credits":3,"section":"Speaking Intensive"},{"number":"MSCM 2200","title":"Introduction to Public Speaking (Recommended)","credits":3,"section":"Speaking Intensive"},{"number":"MATH 1051","title":"Mathematics for Education Majors","credits":3,"section":"Mathematics"},{"number":"FIN 2000","title":"Personal Finance","credits":3,"section":"Social Science"},{"number":"ART 1510","title":"African American Art History","credits":3,"section":"Arts & Humanities"},{"number":"NURS 4205","title":"Global Health Perspectives","credits":3,"section":"Arts & Humanities"},{"number":"MGT 3400","title":"Business Communications","credits":3,"section":"Speaking Intensive"}],"requirements":{"ge":{"label":"General Education","min":39,"max":40,"total":39,"sections":[{"id":"eng_comp","label":"English Composition","hours":6,"note":"ENG 1110 & 1210"},{"id":"foreign_lang","label":"Foreign Language","hours":3,"note":"3 hrs; placement may satisfy"},{"id":"math","label":"Mathematics","hours":3,"note":"3-5 hrs, choose one"},{"id":"science","label":"Science","hours":6,"note":"6-8 hrs, choose two"},{"id":"social_science","label":"Social Science","hours":6,"note":"HIST 1320 required + one more"},{"id":"foundations","label":"Foundations of American Democracy","hours":0,"rule":"flag","note":"Satisfied by HIST 1320, or transfer/AP/CLEP, or Canvas modules","auto":"HIST 1320","waivable":true},{"id":"arts_hum","label":"Arts & Humanities","hours":5,"note":"5-6 hrs; one HUM required"},{"id":"health","label":"Health & Wellness","hours":4,"note":"HEDU 1531 & KIN 1541"},{"id":"career","label":"First Year Seminar","hours":2,"note":"UNIV 1100; waived with 30+ transfer credits","waivable":true},{"id":"speaking_int","label":"Speaking Intensive","hours":3,"note":"MSCM 1250 or 2200"},{"id":"writing_int","label":"Writing Intensive","hours":0,"rule":"flag","note":"HIST 2000 - credits count in the major","auto":"HIST 2000"}]},"major":{"label":"Major in History","total":42,"sections":[{"id":"core_required","label":"Departmental Requirements","hours":15,"rule":"list","required":["HIST 1100","HIST 2000","HIST 2210","HIST 2220","HIST 2890"],"note":"HIST 1100, 2000, 2210, 2220, 2890"},{"id":"regional","label":"Regional History","hours":6,"rule":"groups","groups":["African","European","Latin American"],"need_groups":2,"note":"Select 2 groups: African, European, or Latin American"},{"id":"seminar","label":"Seminar","hours":3,"rule":"choose","tag":"Seminar","note":"Choose one"},{"id":"hist_electives","label":"History Electives","hours":18,"rule":"fill","note":"18 hrs, 2000-level or above"}]},"gen_electives":{"label":"Required General Electives","total":38,"sections":[{"id":"gen_electives","label":"General Electives","hours":38,"rule":"free","note":"Whatever is needed to reach 120 total"}],"dynamic":true}},"degree":{"total":120,"community_engagement":120,"typical":{"gec":39,"major":42,"electives":39,"total":120},"note":"A History major typically closes at 39 gen ed + 42 major + 39 electives. Gen ed can run to 40 (a 5-credit math or an 8-credit science pair), and electives absorb the difference so the total stays 120."}};
+</script>
+<script src="dp-engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
